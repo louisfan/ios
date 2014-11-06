@@ -40,7 +40,7 @@
 }
 
 - (void)setImageWithUrl:(NSString *)url andWaittingImage:(UIImage *)waittingImage andLoadFailedImage:(UIImage *)failedImage andCacheTime:(uint)cacheTime{
-    _loaddingUrl = url;
+    _loaddingUrl = [url retain];
     _cacheTime = cacheTime;
     [_loadFailedImage release];
     _loadFailedImage = nil;
@@ -52,24 +52,36 @@
     else{
         [self setImage:waittingImage];
     }
-    NSString *path = [self pathOfCacheImageWithUrl:[NSURL URLWithString:url]];
-    if ([[NSFileManager defaultManager]fileExistsAtPath:path]) {
-        NSData *data = [NSData dataWithContentsOfFile:path];
-        uint furTime = [ByteDataReader readUnsignedInt:[data bytes] startIndex:0 byteEndian:BYTEORDER_LITTLE_ENDIAN];
-        if (furTime == 0 || ![self cacheExpired:furTime]) {
-            [self setImage:[UIImage imageWithData:[data subdataWithRange:NSMakeRange(sizeof(uint), data.length - sizeof(uint))]]];
-            return;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        NSString *path = [self pathOfCacheImageWithUrl:[NSURL URLWithString:url]];
+        if ([[NSFileManager defaultManager]fileExistsAtPath:path]) {
+            NSData *data = [NSData dataWithContentsOfFile:path];
+            uint furTime = [ByteDataReader readUnsignedInt:[data bytes] startIndex:0 byteEndian:BYTEORDER_LITTLE_ENDIAN];
+            if (furTime == 0 || ![self cacheExpired:furTime]) {
+                UIImage *image =[UIImage imageWithData:[data subdataWithRange:NSMakeRange(sizeof(uint), data.length - sizeof(uint))]];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self setImage:image];
+                });
+                
+            }
+            else{
+                NSError *error = nil;
+                [[NSFileManager defaultManager]removeItemAtPath:path error:&error];//图片缓存过期
+                if (nil != error) {
+                    NSLog(@"imageDeleteError = %@",error.userInfo);
+                }
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
+                });
+            }
+            
         }
-        NSError *error = nil;
-        [[NSFileManager defaultManager]removeItemAtPath:path error:&error];//图片缓存过期
-        if (nil != error) {
-            NSLog(@"imageDeleteError = %@",error.userInfo);
+        else{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
+            });
         }
-    }
-    
-    if (nil != url) {
-        [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
-    }
+    });
 }
 
 - (void)setImageWithAnimation:(UIImage *)image{
