@@ -133,20 +133,25 @@
 }
 
 - (void)cacheImageWithUrl:(NSURL *)url andData:(NSData *)data{     // 将获取的Data缓存到本地
-    NSString *path = [self pathOfCacheImageWithUrl:url];
-    uint furtherTime = 0;
-    if (_cacheTime != 0) {
-        furtherTime = (uint)[[NSDate date] timeIntervalSince1970] + _cacheTime;
-    }
-    const void *bytes = uintToByte(furtherTime, BYTEORDER_LITTLE_ENDIAN);
-    NSMutableData *withTimeData = [NSMutableData dataWithBytes:bytes length:sizeof(uint)];
-    [withTimeData appendData:data];
-    //    [withTimeData writeToFile:path atomically:YES];
-    NSError *error = nil;
-    [withTimeData writeToFile:path options:NSDataWritingAtomic error:&error];
-    if (nil != error) {
-        NSLog(@"%@",error);
-    }
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        NSString *path = [self pathOfCacheImageWithUrl:url];
+        uint furtherTime = 0;
+        if (_cacheTime != 0) {
+            furtherTime = (uint)[[NSDate date] timeIntervalSince1970] + _cacheTime;
+        }
+        const void *bytes = uintToByte(furtherTime, BYTEORDER_LITTLE_ENDIAN);
+        NSMutableData *withTimeData = [NSMutableData dataWithBytes:bytes length:sizeof(uint)];
+        [withTimeData appendData:data];
+        //    [withTimeData writeToFile:path atomically:YES];
+        NSError *error = nil;
+        [withTimeData writeToFile:path options:NSDataWritingAtomic error:&error];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+        });
+        if (nil != error) {
+            NSLog(@"%@",error);
+        }
+    });
 }
 
 - (BOOL)cacheExpired:(uint)time{       //判断缓存是否过期
