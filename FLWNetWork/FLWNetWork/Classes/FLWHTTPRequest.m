@@ -101,7 +101,7 @@
     else{
         [request setHTTPMethod:@"GET"];
     }
-    request.cachePolicy = _cacheMode;
+    request.cachePolicy = (NSURLRequestCachePolicy)_cacheMode;
     _connect = [[NSURLConnection alloc]initWithRequest:request delegate:self];
     [request release];
     [_connect start];

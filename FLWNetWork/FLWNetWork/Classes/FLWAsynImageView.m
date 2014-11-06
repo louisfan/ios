@@ -59,9 +59,12 @@
             uint furTime = [ByteDataReader readUnsignedInt:[data bytes] startIndex:0 byteEndian:BYTEORDER_LITTLE_ENDIAN];
             if (furTime == 0 || ![self cacheExpired:furTime]) {
                 UIImage *image =[UIImage imageWithData:[data subdataWithRange:NSMakeRange(sizeof(uint), data.length - sizeof(uint))]];
+                dispatch_semaphore_t sema = dispatch_semaphore_create(1000);
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [self setImage:image];
+                    dispatch_semaphore_signal(sema);
                 });
+                dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER);
                 
             }
             else{
@@ -70,18 +73,14 @@
                 if (nil != error) {
                     NSLog(@"imageDeleteError = %@",error.userInfo);
                 }
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
-                });
+                [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
             }
-            
         }
         else{
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
-            });
+            [[FLWRequestQueue defaultQueue]addRequestToQueue:url andResponser:self  andTimeOut:0];
         }
     });
+    
 }
 
 - (void)setImageWithAnimation:(UIImage *)image{

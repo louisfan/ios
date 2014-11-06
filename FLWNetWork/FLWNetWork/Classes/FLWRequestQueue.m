@@ -70,7 +70,9 @@
     [_request setDidFinishedLoad:@selector(didFinishedLoad:)];
     [_request setTimeOut:_timeOut];
     _request.requestMethod = FLW_HTTP_REQUEST_METHOD_GET;
-    [_request startRequest];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [_request startRequest];
+    });
 }
 - (void)didFailedLoad:(FLWHTTPRequest *)req{
     [[FLWRequestQueue defaultQueue]loadFinishWithOpretion:self andData:nil andResult:NO];
