@@ -145,7 +145,7 @@
         NSError *error = nil;
         [withTimeData writeToFile:path options:NSDataWritingAtomic error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
-            
+        //执行完后转到主线程
         });
         if (nil != error) {
             NSLog(@"%@",error);
